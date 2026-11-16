@@ -1,18 +1,18 @@
+
 import os
 import logging
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
-import google.generativeai as genai
+from google import genai
 
 # Render se tokens uthana
 TOKEN = os.environ.get("BOT_TOKEN")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
-# AI Setup
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
+# Naya AI Client Setup (google-genai library)
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 # Render ko khush rakhne ke liye Dummy Web Server
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
@@ -34,25 +34,28 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def deals(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('🛍️ **Best Deals:**\n\n1. Best Finance Book: [Yahan Amazon Affiliate Link Daalein]\n2. Best Credit Card: [Yahan Affiliate Link Daalein]')
 
-# AI se baat karne ka function
+# AI se baat karne ka function (Updated for new SDK)
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
-    await update.message.reply_text("Soch raha hoon... 🤔") # User ko wait karne ka signal
+    await update.message.reply_text("Soch raha hoon... 🤔")
     try:
-        # AI ko financial advisor ka role dena
         prompt = f"Aap ek expert financial advisor hain. User ne yeh pucha hai: '{user_text}'. Iska ek short, helpful aur practical jawab Hinglish mein dein."
-        response = model.generate_content(prompt)
+        
+        # Naye SDK aur naye model (gemini-2.5-flash) ka use
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+        )
         await update.message.reply_text(response.text)
     except Exception as e:
+        logging.error(f"AI Error: {e}") # Error ko logs mein print karein
         await update.message.reply_text("Sorry bhai, abhi thoda network issue hai. Thodi der baad try karein.")
 
 if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
     
-    # Server background mein start karein
     threading.Thread(target=run_dummy_server, daemon=True).start()
     
-    # Bot start karein
     application = ApplicationBuilder().token(TOKEN).build()
     application.add_handler(CommandHandler('start', start))
     application.add_handler(CommandHandler('deals', deals))
