@@ -1,4 +1,3 @@
-
 import os
 import logging
 import threading
@@ -6,13 +5,17 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 from google import genai
+from google.genai import types
 
 # Render se tokens uthana
 TOKEN = os.environ.get("BOT_TOKEN")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
-# Naya AI Client Setup (google-genai library)
-client = genai.Client(api_key=GEMINI_API_KEY)
+# Naya AI Client Setup (Timeout 300s ke saath)
+client = genai.Client(
+    api_key=GEMINI_API_KEY,
+    http_options=types.HttpOptions(timeout=300000) 
+)
 
 # Render ko khush rakhne ke liye Dummy Web Server
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
@@ -30,25 +33,25 @@ def run_dummy_server():
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('👋 Hello! Main aapka Wealth Vault AI hoon. Mujhse apne paise, savings, ya investment ke baare mein kuch bhi puchhiye!\n\nDeals dekhne ke liye /deals type karein.')
 
-# Deals Command (Affiliate Marketing ke liye)
+# Deals Command
 async def deals(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('🛍️ **Best Deals:**\n\n1. Best Finance Book: [Yahan Amazon Affiliate Link Daalein]\n2. Best Credit Card: [Yahan Affiliate Link Daalein]')
 
-# AI se baat karne ka function (Updated for new SDK)
+# AI se baat karne ka function
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
     await update.message.reply_text("Soch raha hoon... 🤔")
     try:
         prompt = f"Aap ek expert financial advisor hain. User ne yeh pucha hai: '{user_text}'. Iska ek short, helpful aur practical jawab Hinglish mein dein."
         
-        # Naye SDK aur naye model (gemini-2.5-flash) ka use
+        # Naya stable model use karein
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-1.5-flash',
             contents=prompt,
         )
         await update.message.reply_text(response.text)
     except Exception as e:
-        logging.error(f"AI Error: {e}") # Error ko logs mein print karein
+        logging.error(f"AI Error: {e}") 
         await update.message.reply_text("Sorry bhai, abhi thoda network issue hai. Thodi der baad try karein.")
 
 if __name__ == '__main__':
